@@ -1,58 +1,146 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Task App Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel 13 REST API for a task manager. Authentication is token based via
+[Laravel Sanctum](https://laravel.com/docs/sanctum), and every task is scoped to the user who
+created it — a user can only ever read or modify their own tasks.
 
-## About Laravel
+## Requirements
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Tool | Version |
+| --- | --- |
+| PHP | 8.3 or newer |
+| Composer | 2.x |
+| Node.js | 20 or newer (with npm) |
+| PostgreSQL | 13 or newer |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 1. Clone and install PHP dependencies
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```sh
+git clone <repository-url> task-app-backend
+cd task-app-backend
+composer install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Create your environment file
 
-## Contributing
+```sh
+cp .env.example .env
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 3. Create the database and add your credentials to `.env`
 
-## Code of Conduct
+> [!IMPORTANT]
+> Do this **before** running `composer run setup` or `composer run dev`. The setup script runs
+> the database migrations, so it will fail immediately if these values are wrong or the
+> database does not exist.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Create an empty database:
 
-## Security Vulnerabilities
+```sh
+createdb task_app_backend
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Or from a `psql` session:
 
-## License
+```sql
+CREATE DATABASE task_app_backend;
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Then open `.env` and fill in the `DB_*` block to match your local PostgreSQL server:
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=task_app_backend
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+```
+
+### 4. Run the setup script
+
+```sh
+composer run setup
+```
+
+This generates the application key, runs the migrations, and installs and builds the frontend
+assets, so there is nothing else to do by hand.
+
+## Running the app
+
+```sh
+composer run dev
+```
+
+This starts four processes together — the PHP development server, the queue listener, live log
+tailing via [Pail](https://laravel.com/docs/logging#tailing-logs), and the Vite dev server. The
+API is then available at **http://localhost:8000**.
+
+If you only need the HTTP server, `php artisan serve` is enough.
+
+## Tests
+
+```sh
+composer run test
+```
+
+Or run Pest directly:
+
+```sh
+./vendor/bin/pest
+```
+
+The test suite runs against an in-memory SQLite database (configured in `phpunit.xml`), so it
+never touches the PostgreSQL database you set up above and needs no extra configuration.
+
+## API reference
+
+All routes are prefixed with `/api/v1`.
+
+### Public
+
+| Method | Endpoint | Body | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/signup` | `name`, `email`, `password` (min 8) | Creates a user and returns an access token |
+| `POST` | `/api/v1/login` | `email`, `password` | Returns an access token |
+
+### Authenticated
+
+These require an `Authorization: Bearer <access_token>` header.
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/logout` | Revokes the token used to make the request |
+| `GET` | `/api/v1/me` | Returns the authenticated user |
+| `GET` | `/api/v1/tasks` | Lists your tasks, newest first. Optional `per_page` (1–100, default 10) |
+| `POST` | `/api/v1/tasks` | Creates a task |
+| `GET` | `/api/v1/tasks/{id}` | Shows a single task |
+| `PATCH` | `/api/v1/tasks/{id}` | Updates a task |
+| `DELETE` | `/api/v1/tasks/{id}` | Soft deletes a task |
+
+### Task fields
+
+| Field | Rules |
+| --- | --- |
+| `title` | Required on create, string, max 255 |
+| `description` | Optional, string |
+| `status` | Optional — `pending` (default), `in_progress`, `completed` |
+| `priority` | Optional — `low`, `medium` (default), `high` |
+| `due_date` | Optional, any parseable date |
+
+### Example
+
+```sh
+# Sign up and capture the token
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/signup \
+  -H 'Accept: application/json' \
+  -d 'name=Ada&email=ada@example.com&password=secret123' | jq -r .data.access_token)
+
+# Create a task
+curl -s -X POST http://localhost:8000/api/v1/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Accept: application/json' \
+  -d 'title=Write the docs&priority=high'
+```

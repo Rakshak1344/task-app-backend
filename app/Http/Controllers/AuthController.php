@@ -7,6 +7,7 @@ use App\Http\Requests\SignupRequest;
 use App\Http\Resources\AuthResource;
 use App\Models\User;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -31,4 +32,12 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token');
         return AuthResource::make($user, $token->plainTextToken);
     }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json(['message' => 'Logged out successfully']);
+    }
+
 }

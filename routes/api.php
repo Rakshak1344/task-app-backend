@@ -14,5 +14,6 @@ Route::prefix('v1')->group(function () {
 
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/me', fn(Request $request) => UserResource::make($request->user()));
+    Route::post('/logout', [AuthController::class, 'logout']);
     Route::apiResource('tasks', TaskController::class);
 });

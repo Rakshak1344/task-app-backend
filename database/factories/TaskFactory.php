@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Http\Enums\TaskPriority;
-use App\Http\Enums\TaskStatus;
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;

@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexTaskRequest extends FormRequest
 {
@@ -23,6 +26,9 @@ class IndexTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'search' => 'sometimes|nullable|string|max:255',
+            'status' => ['sometimes', 'nullable', Rule::enum(TaskStatus::class)],
+            'priority' => ['sometimes', 'nullable', Rule::enum(TaskPriority::class)],
             'per_page' => 'sometimes|integer|min:1|max:100',
         ];
     }

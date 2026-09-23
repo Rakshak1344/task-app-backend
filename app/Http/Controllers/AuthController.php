@@ -12,12 +12,15 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-
     public function signUp(SignupRequest $request)
     {
-        $user = User::firstOrCreate($request->validated());
+        $user = User::create($request->validated());
         $token = $user->createToken('auth_token');
-        return AuthResource::make($user, $token->plainTextToken);
+
+        return AuthResource::make($user, $token->plainTextToken)
+            ->additional(['message' => 'Account created successfully'])
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function login(LoginRequest $request)
@@ -25,12 +28,14 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw new AuthenticationException('Invalid credentials');
         }
 
         $token = $user->createToken('auth_token');
-        return AuthResource::make($user, $token->plainTextToken);
+
+        return AuthResource::make($user, $token->plainTextToken)
+            ->additional(['message' => 'Logged in successfully']);
     }
 
     public function logout(Request $request)
@@ -39,5 +44,4 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Logged out successfully']);
     }
-
 }

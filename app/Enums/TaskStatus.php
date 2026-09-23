@@ -1,7 +1,7 @@
 <?php
 
+namespace App\Enums;
 
-namespace App\Http\Enums;
 enum TaskStatus: string
 {
     case PENDING = 'pending';

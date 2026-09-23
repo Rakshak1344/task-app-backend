@@ -17,10 +17,18 @@ class TaskController extends Controller
     #[Authorize('viewAny', Task::class)]
     public function index(IndexTaskRequest $request)
     {
-        $pageCount = $request->validated('per_page', 10);
+        $filters = $request->validated();
+
         $tasks = $request->user()->tasks()
-            ->latest()->latest('id')
-            ->paginate($pageCount);
+            ->search($filters['search'] ?? null)
+            ->withStatus($filters['status'] ?? null)
+            ->withPriority($filters['priority'] ?? null)
+            ->orderBy($filters['sort'] ?? 'created_at', $filters['direction'] ?? 'desc')
+            // Tie-breaker so a row can never appear on two pages or be skipped.
+            ->orderBy('id', 'desc')
+            ->paginate($filters['per_page'] ?? 10)
+            // Without this, page 2 of a filtered search silently drops the filters.
+            ->withQueryString();
 
         return TaskResource::collection($tasks);
     }
@@ -32,7 +40,9 @@ class TaskController extends Controller
     public function store(StoreTaskRequest $request)
     {
         $task = $request->user()->tasks()->create($request->validated());
-        return TaskResource::make($task);
+
+        return TaskResource::make($task)
+            ->additional(['message' => 'Task created successfully']);
     }
 
     /**
@@ -51,7 +61,9 @@ class TaskController extends Controller
     public function update(UpdateTaskRequest $request, Task $task)
     {
         $task->update($request->validated());
-        return TaskResource::make($task);
+
+        return TaskResource::make($task)
+            ->additional(['message' => 'Task updated successfully']);
     }
 
     /**
@@ -61,6 +73,10 @@ class TaskController extends Controller
     public function destroy(Task $task)
     {
         $task->delete();
-        return response()->json(['message' => 'Deleted Successfully']);
+
+        return response()->json([
+            'data' => null,
+            'message' => 'Task deleted successfully',
+        ]);
     }
 }

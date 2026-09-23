@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Http\Enums\TaskPriority;
-use App\Http\Enums\TaskStatus;
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +26,9 @@ class UpdateTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'sometimes|string|max:255',
+            // `sometimes|required` — the field may be absent, but if it is sent it must
+            // hold a value. Without `required`, an empty string would blank out a title.
+            'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|nullable|string',
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'priority' => ['sometimes', Rule::enum(TaskPriority::class)],

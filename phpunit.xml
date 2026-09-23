@@ -23,9 +23,12 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <!--
+            The database connection is deliberately NOT set here. The suite runs against a
+            real PostgreSQL database (see .env.testing) so it exercises the same driver as
+            production. PHPUnit <env> entries do not override already-set variables, so
+            re-adding DB_CONNECTION here would silently pin the suite back to SQLite.
+        -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

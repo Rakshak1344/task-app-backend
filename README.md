@@ -82,18 +82,28 @@ If you only need the HTTP server, `php artisan serve` is enough.
 
 ## Tests
 
+The suite runs against a **real PostgreSQL database** rather than in-memory SQLite, so it
+exercises the same driver as production — case sensitivity, `LIKE` behaviour and date
+handling all match what you get in deployment.
+
+One-time setup:
+
 ```sh
-composer run test
+createdb task_app_backend_testing
+cp .env.testing.example .env.testing   # then fill in DB_USERNAME / DB_PASSWORD
+php artisan key:generate --env=testing
 ```
 
-Or run Pest directly:
+Then:
 
 ```sh
-./vendor/bin/pest
+composer run test          # or: ./vendor/bin/pest
 ```
 
-The test suite runs against an in-memory SQLite database (configured in `phpunit.xml`), so it
-never touches the PostgreSQL database you set up above and needs no extra configuration.
+> [!NOTE]
+> The test database is wiped on every run. `tests/TestCase.php` refuses to start unless the
+> configured database name ends in `_testing`, so a missing or misconfigured `.env.testing`
+> fails loudly instead of dropping your development data.
 
 ## API reference
 
@@ -114,11 +124,52 @@ These require an `Authorization: Bearer <access_token>` header.
 | --- | --- | --- |
 | `POST` | `/api/v1/logout` | Revokes the token used to make the request |
 | `GET` | `/api/v1/me` | Returns the authenticated user |
-| `GET` | `/api/v1/tasks` | Lists your tasks, newest first. Optional `per_page` (1–100, default 10) |
+| `GET` | `/api/v1/tasks` | Lists your tasks, newest first. Supports search, filtering, sorting and pagination — see below |
 | `POST` | `/api/v1/tasks` | Creates a task |
 | `GET` | `/api/v1/tasks/{id}` | Shows a single task |
 | `PATCH` | `/api/v1/tasks/{id}` | Updates a task |
 | `DELETE` | `/api/v1/tasks/{id}` | Soft deletes a task |
+
+### Listing tasks
+
+`GET /api/v1/tasks` accepts these query parameters. An unrecognised value is rejected with
+`422` rather than silently ignored, so a typo in a filter never returns the wrong data.
+
+| Parameter | Values | Description |
+| --- | --- | --- |
+| `search` | string, max 255 | Case-insensitive partial match on **title**. `%` and `_` are matched literally. |
+| `status` | `pending`, `in_progress`, `completed` | Exact status match |
+| `priority` | `low`, `medium`, `high` | Exact priority match |
+| `sort` | `created_at` (default), `due_date`, `title` | Column to sort by |
+| `direction` | `asc`, `desc` (default) | Sort direction |
+| `per_page` | 1–100, default 10 | Results per page |
+| `page` | integer | Page number |
+
+Parameters combine as an `AND`, and are preserved in the `links.next` / `links.prev` URLs.
+
+```sh
+curl -s -G http://localhost:8000/api/v1/tasks \
+  -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' \
+  --data-urlencode 'search=report' -d 'status=pending' -d 'per_page=5'
+```
+
+### Response shape
+
+Every successful response is wrapped consistently:
+
+```jsonc
+// single resource
+{ "data": { "id": 1, "title": "..." }, "message": "Task created successfully" }
+
+// collection
+{ "data": [ ... ], "links": { ... }, "meta": { ... } }
+
+// action-only endpoints (logout, delete)
+{ "data": null, "message": "Task deleted successfully" }
+
+// errors
+{ "message": "The given data was invalid.", "errors": { "title": ["..."] } }
+```
 
 ### Task fields
 

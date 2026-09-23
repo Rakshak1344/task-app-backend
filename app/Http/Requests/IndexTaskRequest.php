@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TaskPriority;
+use App\Enums\TaskStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexTaskRequest extends FormRequest
 {
@@ -23,7 +26,20 @@ class IndexTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'search' => 'sometimes|nullable|string|max:255',
+            'status' => ['sometimes', 'nullable', Rule::enum(TaskStatus::class)],
+            'priority' => ['sometimes', 'nullable', Rule::enum(TaskPriority::class)],
+            'sort' => 'sometimes|in:created_at,due_date,title',
+            'direction' => 'sometimes|in:asc,desc',
             'per_page' => 'sometimes|integer|min:1|max:100',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'sort.in' => 'Tasks can only be sorted by created_at, due_date or title.',
+            'direction.in' => 'Sort direction must be asc or desc.',
         ];
     }
 }

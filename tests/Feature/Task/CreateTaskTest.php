@@ -5,12 +5,6 @@ use App\Enums\TaskStatus;
 use App\Models\Task;
 use App\Models\User;
 
-/*
-|--------------------------------------------------------------------------
-| Creating a task
-|--------------------------------------------------------------------------
-*/
-
 it('creates a task with every field and returns 201', function () {
     $user = User::factory()->create();
 

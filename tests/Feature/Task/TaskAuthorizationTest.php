@@ -3,12 +3,6 @@
 use App\Models\Task;
 use App\Models\User;
 
-/*
-|--------------------------------------------------------------------------
-| Unauthenticated access
-|--------------------------------------------------------------------------
-*/
-
 it('rejects unauthenticated access to every task route', function () {
     $task = Task::factory()->for(User::factory())->create();
 
@@ -18,12 +12,6 @@ it('rejects unauthenticated access to every task route', function () {
     $this->patchJson("/api/v1/tasks/{$task->id}", ['status' => 'completed'])->assertUnauthorized();
     $this->deleteJson("/api/v1/tasks/{$task->id}")->assertUnauthorized();
 });
-
-/*
-|--------------------------------------------------------------------------
-| The owner has full access to their own task
-|--------------------------------------------------------------------------
-*/
 
 it('lets the owner run the full crud cycle on their own task', function () {
     $owner = User::factory()->create();
@@ -35,14 +23,10 @@ it('lets the owner run the full crud cycle on their own task', function () {
     $this->postJson('/api/v1/tasks', ['title' => 'Mine'])->assertCreated();
     $this->getJson("/api/v1/tasks/{$task->id}")->assertOk();
     $this->patchJson("/api/v1/tasks/{$task->id}", ['status' => 'completed'])->assertOk();
-    $this->deleteJson("/api/v1/tasks/{$task->id}")->assertOk();
+    $this->deleteJson("/api/v1/tasks/{$task->id}")
+        ->assertOk()
+        ->assertExactJson(['message' => 'Task deleted successfully']);
 });
-
-/*
-|--------------------------------------------------------------------------
-| A non-owner is refused with 403 and cannot mutate anything
-|--------------------------------------------------------------------------
-*/
 
 it('forbids a non-owner from viewing another users task', function () {
     $task = Task::factory()->for(User::factory())->create();
@@ -73,12 +57,6 @@ it('forbids a non-owner from deleting another users task and leaves it present',
         ->and($task->fresh()->deleted_at)->toBeNull();
 });
 
-/*
-|--------------------------------------------------------------------------
-| The index leaks nothing belonging to anyone else
-|--------------------------------------------------------------------------
-*/
-
 it('only lists tasks belonging to the authenticated user', function () {
     $owner = User::factory()->create();
     $stranger = User::factory()->create();
@@ -96,12 +74,6 @@ it('only lists tasks belonging to the authenticated user', function () {
         expect($returnedIds)->not->toContain($foreign->id);
     }
 });
-
-/*
-|--------------------------------------------------------------------------
-| Ownership cannot be forged on create or reassigned on update
-|--------------------------------------------------------------------------
-*/
 
 it('assigns the authenticated user as owner even when user_id is forged in the payload', function () {
     $actor = User::factory()->create();

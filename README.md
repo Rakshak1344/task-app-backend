@@ -124,7 +124,7 @@ These require an `Authorization: Bearer <access_token>` header.
 | --- | --- | --- |
 | `POST` | `/api/v1/logout` | Revokes the token used to make the request |
 | `GET` | `/api/v1/me` | Returns the authenticated user |
-| `GET` | `/api/v1/tasks` | Lists your tasks, newest first. Supports search, filtering, sorting and pagination — see below |
+| `GET` | `/api/v1/tasks` | Lists your tasks, newest first. Supports search, filtering and pagination — see below |
 | `POST` | `/api/v1/tasks` | Creates a task |
 | `GET` | `/api/v1/tasks/{id}` | Shows a single task |
 | `PATCH` | `/api/v1/tasks/{id}` | Updates a task |
@@ -140,12 +140,11 @@ These require an `Authorization: Bearer <access_token>` header.
 | `search` | string, max 255 | Case-insensitive partial match on **title**. `%` and `_` are matched literally. |
 | `status` | `pending`, `in_progress`, `completed` | Exact status match |
 | `priority` | `low`, `medium`, `high` | Exact priority match |
-| `sort` | `created_at` (default), `due_date`, `title` | Column to sort by |
-| `direction` | `asc`, `desc` (default) | Sort direction |
 | `per_page` | 1–100, default 10 | Results per page |
 | `page` | integer | Page number |
 
 Parameters combine as an `AND`, and are preserved in the `links.next` / `links.prev` URLs.
+Results are always ordered newest first — ordering is not client-configurable.
 
 ```sh
 curl -s -G http://localhost:8000/api/v1/tasks \
@@ -155,7 +154,7 @@ curl -s -G http://localhost:8000/api/v1/tasks \
 
 ### Response shape
 
-Every successful response is wrapped consistently:
+Responses follow one rule: **`data` is present only when there is a payload.**
 
 ```jsonc
 // single resource
@@ -164,8 +163,8 @@ Every successful response is wrapped consistently:
 // collection
 { "data": [ ... ], "links": { ... }, "meta": { ... } }
 
-// action-only endpoints (logout, delete)
-{ "data": null, "message": "Task deleted successfully" }
+// action-only endpoints (logout, delete) — no payload, so no `data` key
+{ "message": "Task deleted successfully" }
 
 // errors
 { "message": "The given data was invalid.", "errors": { "title": ["..."] } }

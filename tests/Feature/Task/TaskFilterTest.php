@@ -10,14 +10,8 @@ beforeEach(function () {
     $this->actingAs($this->user, 'sanctum');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Filter by status
-|--------------------------------------------------------------------------
-*/
-
 it('filters by each status', function (TaskStatus $status) {
-    // TaskFactory randomises status, so every row here is set explicitly.
+
     foreach (TaskStatus::cases() as $case) {
         Task::factory(2)->for($this->user)->create(['status' => $case]);
     }
@@ -38,12 +32,6 @@ it('returns an empty set when no task has the requested status', function () {
         ->and($response->json('meta.total'))->toBe(0);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Filter by priority
-|--------------------------------------------------------------------------
-*/
-
 it('filters by each priority', function (TaskPriority $priority) {
     foreach (TaskPriority::cases() as $case) {
         Task::factory(2)->for($this->user)->create(['priority' => $case]);
@@ -55,12 +43,6 @@ it('filters by each priority', function (TaskPriority $priority) {
         ->and(collect($response->json('data'))->pluck('priority')->unique()->all())
         ->toBe([$priority->value]);
 })->with(TaskPriority::cases());
-
-/*
-|--------------------------------------------------------------------------
-| Combined filters
-|--------------------------------------------------------------------------
-*/
 
 it('applies status and priority together as an AND', function () {
     Task::factory()->for($this->user)->create([
@@ -83,12 +65,6 @@ it('applies status and priority together as an AND', function () {
         ->and($response->json('data.0.title'))->toBe('Wanted');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Filters must not widen ownership scoping
-|--------------------------------------------------------------------------
-*/
-
 it('never returns another users task through a filter', function () {
     $stranger = User::factory()->create();
 
@@ -98,40 +74,50 @@ it('never returns another users task through a filter', function () {
     expect($this->getJson('/api/v1/tasks?status=pending')->assertOk()->json('meta.total'))->toBe(2);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Sorting
-|--------------------------------------------------------------------------
-*/
-
-it('sorts by due date in the requested direction', function () {
-    Task::factory()->for($this->user)->create(['title' => 'Later', 'due_date' => '2026-12-01']);
-    Task::factory()->for($this->user)->create(['title' => 'Sooner', 'due_date' => '2026-01-01']);
-
-    $asc = collect($this->getJson('/api/v1/tasks?sort=due_date&direction=asc')->assertOk()->json('data'))
-        ->pluck('title')->all();
-
-    $desc = collect($this->getJson('/api/v1/tasks?sort=due_date&direction=desc')->assertOk()->json('data'))
-        ->pluck('title')->all();
-
-    expect($asc)->toBe(['Sooner', 'Later'])
-        ->and($desc)->toBe(['Later', 'Sooner']);
-});
-
-it('defaults to newest first', function () {
+it('returns the newest tasks first', function () {
+    $oldest = Task::factory()->for($this->user)->create(['created_at' => now()->subWeek()]);
     $older = Task::factory()->for($this->user)->create(['created_at' => now()->subDay()]);
-    $newer = Task::factory()->for($this->user)->create(['created_at' => now()]);
+    $newest = Task::factory()->for($this->user)->create(['created_at' => now()]);
 
     $ids = collect($this->getJson('/api/v1/tasks')->assertOk()->json('data'))->pluck('id')->all();
+
+    expect($ids)->toBe([$newest->id, $older->id, $oldest->id]);
+});
+
+it('keeps newest first when a filter is applied', function () {
+    $older = Task::factory()->for($this->user)
+        ->create(['status' => TaskStatus::PENDING, 'created_at' => now()->subDay()]);
+    $newer = Task::factory()->for($this->user)
+        ->create(['status' => TaskStatus::PENDING, 'created_at' => now()]);
+    Task::factory()->for($this->user)->create(['status' => TaskStatus::COMPLETED]);
+
+    $ids = collect($this->getJson('/api/v1/tasks?status=pending')->assertOk()->json('data'))
+        ->pluck('id')->all();
 
     expect($ids)->toBe([$newer->id, $older->id]);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Validation — an unknown filter value must be rejected, not ignored
-|--------------------------------------------------------------------------
-*/
+it('breaks ties on id so rows created in the same instant still page cleanly', function () {
+    $sameMoment = now();
+
+    $first = Task::factory()->for($this->user)->create(['created_at' => $sameMoment]);
+    $second = Task::factory()->for($this->user)->create(['created_at' => $sameMoment]);
+
+    $ids = collect($this->getJson('/api/v1/tasks')->assertOk()->json('data'))->pluck('id')->all();
+
+    expect($ids)->toBe([$second->id, $first->id]);
+});
+
+it('ignores sort and direction parameters now that ordering is fixed', function () {
+    $older = Task::factory()->for($this->user)->create(['created_at' => now()->subDay()]);
+    $newer = Task::factory()->for($this->user)->create(['created_at' => now()]);
+
+    $ids = collect(
+        $this->getJson('/api/v1/tasks?sort=title&direction=asc')->assertOk()->json('data')
+    )->pluck('id')->all();
+
+    expect($ids)->toBe([$newer->id, $older->id]);
+});
 
 it('rejects an invalid status with 422 instead of silently listing everything', function () {
     Task::factory(3)->for($this->user)->create();
@@ -145,17 +131,4 @@ it('rejects an invalid priority with 422', function () {
     $this->getJson('/api/v1/tasks?priority=urgent')
         ->assertStatus(422)
         ->assertJsonValidationErrors('priority');
-});
-
-it('rejects an unsortable column', function () {
-    // Prevents sort from becoming an arbitrary-column disclosure vector.
-    $this->getJson('/api/v1/tasks?sort=password')
-        ->assertStatus(422)
-        ->assertJsonValidationErrors('sort');
-});
-
-it('rejects an invalid sort direction', function () {
-    $this->getJson('/api/v1/tasks?sort=title&direction=sideways')
-        ->assertStatus(422)
-        ->assertJsonValidationErrors('direction');
 });

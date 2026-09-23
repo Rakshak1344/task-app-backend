@@ -9,21 +9,12 @@ beforeEach(function () {
     $this->actingAs($this->user, 'sanctum');
 });
 
-/**
- * @return Collection<int, string>
- */
 function searchTitles(string $query): Collection
 {
     return collect(
         test()->getJson("/api/v1/tasks?{$query}")->assertOk()->json('data')
     )->pluck('title');
 }
-
-/*
-|--------------------------------------------------------------------------
-| Matching
-|--------------------------------------------------------------------------
-*/
 
 it('matches a partial title', function () {
     Task::factory()->for($this->user)->create(['title' => 'Write the quarterly report']);
@@ -54,12 +45,6 @@ it('returns every task whose title matches', function () {
     expect(searchTitles('search=report'))->toHaveCount(2);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Non-matching
-|--------------------------------------------------------------------------
-*/
-
 it('searches the title only, not the description', function () {
     Task::factory()->for($this->user)->create([
         'title' => 'Unrelated title',
@@ -86,17 +71,10 @@ it('ignores an empty or whitespace-only search term and returns everything', fun
     expect($response->json('meta.total'))->toBe(3);
 })->with(['', '   ']);
 
-/*
-|--------------------------------------------------------------------------
-| LIKE metacharacters must be literal, not wildcards
-|--------------------------------------------------------------------------
-*/
-
 it('treats a percent sign as a literal character', function () {
     Task::factory()->for($this->user)->create(['title' => 'Grew 50% this year']);
     Task::factory()->for($this->user)->create(['title' => 'No numbers here']);
 
-    // An unescaped "%" would wildcard and match both rows.
     expect(searchTitles('search='.urlencode('50%')))->toEqual(collect(['Grew 50% this year']));
 });
 
@@ -104,7 +82,6 @@ it('treats an underscore as a literal character', function () {
     Task::factory()->for($this->user)->create(['title' => 'snake_case naming']);
     Task::factory()->for($this->user)->create(['title' => 'snakeXcase naming']);
 
-    // An unescaped "_" matches any single character, which would return both.
     expect(searchTitles('search='.urlencode('snake_case')))->toEqual(collect(['snake_case naming']));
 });
 
@@ -114,12 +91,6 @@ it('treats a lone percent sign as a literal rather than matching everything', fu
 
     expect(searchTitles('search='.urlencode('%')))->toHaveCount(1);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Search must never widen ownership scoping
-|--------------------------------------------------------------------------
-*/
 
 it('never returns another users task even when the title matches', function () {
     $stranger = User::factory()->create();
@@ -139,12 +110,6 @@ it('returns nothing when only another users task matches', function () {
 
     expect(searchTitles('search=merger'))->toBeEmpty();
 });
-
-/*
-|--------------------------------------------------------------------------
-| Combining with filters and pagination
-|--------------------------------------------------------------------------
-*/
 
 it('combines search with a status filter', function () {
     Task::factory()->for($this->user)->create(['title' => 'Report A', 'status' => 'pending']);
@@ -170,7 +135,6 @@ it('keeps the search term in the pagination links', function () {
 
     $next = $this->getJson('/api/v1/tasks?search=report&per_page=10')->assertOk()->json('links.next');
 
-    // Without withQueryString() the filters silently vanish on page two.
     expect($next)->toContain('search=report')->toContain('per_page=10');
 });
 
@@ -184,12 +148,6 @@ it('keeps the filters applied on page two', function () {
         ->and(collect($response->json('data'))->pluck('title')->unique()->all())
         ->toBe(['Report item']);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Validation
-|--------------------------------------------------------------------------
-*/
 
 it('rejects a search term longer than 255 characters', function () {
     $this->getJson('/api/v1/tasks?search='.str_repeat('a', 256))

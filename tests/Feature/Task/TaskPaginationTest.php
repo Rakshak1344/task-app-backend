@@ -3,12 +3,6 @@
 use App\Models\Task;
 use App\Models\User;
 
-/*
-|--------------------------------------------------------------------------
-| Envelope
-|--------------------------------------------------------------------------
-*/
-
 it('returns a paginated envelope', function () {
     $owner = User::factory()->create();
     Task::factory(25)->for($owner)->create();
@@ -22,12 +16,6 @@ it('returns a paginated envelope', function () {
             'meta' => ['current_page', 'last_page', 'per_page', 'total'],
         ]);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Page size
-|--------------------------------------------------------------------------
-*/
 
 it('defaults to 10 per page when per_page is not supplied', function () {
     $owner = User::factory()->create();
@@ -67,12 +55,6 @@ it('rejects an out of range or non numeric per_page', function (string $value) {
         ->assertJsonValidationErrors('per_page');
 })->with(['0', '101', 'abc', '-5']);
 
-/*
-|--------------------------------------------------------------------------
-| Paging through
-|--------------------------------------------------------------------------
-*/
-
 it('returns the remainder on the last page', function () {
     $owner = User::factory()->create();
     Task::factory(25)->for($owner)->create();
@@ -97,16 +79,9 @@ it('pages are disjoint and together cover every task the user owns', function ()
         );
     }
 
-    // No row appears on two pages, and nothing was skipped.
     expect($seen->duplicates())->toBeEmpty()
         ->and($seen->sort()->values()->all())->toBe($expected);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Pagination must not widen the owner scoping
-|--------------------------------------------------------------------------
-*/
 
 it('never leaks another users tasks on any page', function () {
     $owner = User::factory()->create();
@@ -128,12 +103,6 @@ it('never leaks another users tasks on any page', function () {
         }
     }
 });
-
-/*
-|--------------------------------------------------------------------------
-| Empty case
-|--------------------------------------------------------------------------
-*/
 
 it('returns an empty page rather than an error when the user has no tasks', function () {
     $response = $this->actingAs(User::factory()->create(), 'sanctum')

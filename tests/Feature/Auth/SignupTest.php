@@ -3,12 +3,6 @@
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-/*
-|--------------------------------------------------------------------------
-| Successful signup
-|--------------------------------------------------------------------------
-*/
-
 it('creates a user and returns a token with 201', function () {
     $response = $this->postJson('/api/v1/signup', [
         'name' => 'Ada Lovelace',
@@ -53,12 +47,6 @@ it('issues a signup token that authenticates immediately', function () {
         ->assertJsonPath('data.email', 'ada@example.com');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Validation failures
-|--------------------------------------------------------------------------
-*/
-
 it('rejects a duplicate email with 422 rather than a database error', function () {
     User::factory()->create(['email' => 'ada@example.com']);
 
@@ -77,8 +65,6 @@ it('rejects a duplicate email even when the existing user is soft deleted', func
     $user = User::factory()->create(['email' => 'ada@example.com']);
     $user->delete();
 
-    // The unique index still holds the soft-deleted row, so this must fail validation
-    // rather than blowing up as a raw integrity-constraint violation.
     $this->postJson('/api/v1/signup', [
         'name' => 'Ada Again',
         'email' => 'ada@example.com',

@@ -23,7 +23,8 @@ class TaskController extends Controller
             ->search($filters['search'] ?? null)
             ->withStatus($filters['status'] ?? null)
             ->withPriority($filters['priority'] ?? null)
-            ->orderBy($filters['sort'] ?? 'created_at', $filters['direction'] ?? 'desc')
+            // Newest first, always. Ordering is fixed rather than client-controlled.
+            ->latest()
             // Tie-breaker so a row can never appear on two pages or be skipped.
             ->orderBy('id', 'desc')
             ->paginate($filters['per_page'] ?? 10)
@@ -74,9 +75,6 @@ class TaskController extends Controller
     {
         $task->delete();
 
-        return response()->json([
-            'data' => null,
-            'message' => 'Task deleted successfully',
-        ]);
+        return response()->json(['message' => 'Task deleted successfully']);
     }
 }

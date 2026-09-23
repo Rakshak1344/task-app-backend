@@ -2,12 +2,6 @@
 
 use App\Models\User;
 
-/*
-|--------------------------------------------------------------------------
-| Successful login
-|--------------------------------------------------------------------------
-*/
-
 it('logs a user in with valid credentials', function () {
     $user = User::factory()->create(['email' => 'ada@example.com']);
 
@@ -37,7 +31,6 @@ it('issues a token that actually authenticates subsequent requests', function ()
         'password' => 'password',
     ])->assertOk()->json('data.access_token');
 
-    // A token is only meaningful if it opens a protected route.
     $this->withHeaders(bearer($token))
         ->getJson('/api/v1/me')
         ->assertOk()
@@ -68,12 +61,6 @@ it('never returns the password or its hash', function () {
         ->and($body)->not->toContain($user->getAuthPassword());
 });
 
-/*
-|--------------------------------------------------------------------------
-| Failed login
-|--------------------------------------------------------------------------
-*/
-
 it('rejects a wrong password with 401', function () {
     $user = User::factory()->create();
 
@@ -103,7 +90,6 @@ it('does not let the response distinguish a wrong password from an unknown user'
         'password' => 'password',
     ])->assertUnauthorized();
 
-    // Differing bodies would turn the endpoint into a user-enumeration oracle.
     expect($wrongPassword->json())->toBe($unknownEmail->json());
 });
 

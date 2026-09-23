@@ -8,12 +8,6 @@ beforeEach(function () {
     $this->actingAs($this->user, 'sanctum');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Create — validation failures
-|--------------------------------------------------------------------------
-*/
-
 it('rejects a create payload with no title', function () {
     $this->postJson('/api/v1/tasks', ['description' => 'Body but no title'])
         ->assertStatus(422)
@@ -43,7 +37,7 @@ it('rejects a title longer than 255 characters', function () {
 });
 
 it('accepts a title of exactly 255 characters', function () {
-    // Guards the boundary from off-by-one in either direction.
+
     $this->postJson('/api/v1/tasks', ['title' => str_repeat('a', 255)])
         ->assertCreated();
 });
@@ -81,12 +75,6 @@ it('reports every invalid field in one response', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrors(['title', 'status', 'priority', 'due_date']);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Update — validation failures
-|--------------------------------------------------------------------------
-*/
 
 it('rejects an invalid update and leaves the task untouched', function (array $payload, string $field) {
     $task = Task::factory()->for($this->user)->create([
@@ -127,12 +115,6 @@ it('accepts an empty update payload as a no-op', function () {
         ->assertOk()
         ->assertJsonPath('data.title', 'Unchanged');
 });
-
-/*
-|--------------------------------------------------------------------------
-| Missing resources
-|--------------------------------------------------------------------------
-*/
 
 it('returns 404 for a task id that does not exist', function () {
     $this->getJson('/api/v1/tasks/999999')->assertNotFound();

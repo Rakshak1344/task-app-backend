@@ -23,12 +23,9 @@ class TaskController extends Controller
             ->search($filters['search'] ?? null)
             ->withStatus($filters['status'] ?? null)
             ->withPriority($filters['priority'] ?? null)
-            // Newest first, always. Ordering is fixed rather than client-controlled.
             ->latest()
-            // Tie-breaker so a row can never appear on two pages or be skipped.
             ->orderBy('id', 'desc')
             ->paginate($filters['per_page'] ?? 10)
-            // Without this, page 2 of a filtered search silently drops the filters.
             ->withQueryString();
 
         return TaskResource::collection($tasks);
